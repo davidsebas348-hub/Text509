@@ -1,19 +1,23 @@
--- ======================
--- DISPLAYNAME ESP
--- ROLE_TABLE COLOR VERSION
--- ======================
+-- ============================
+-- DISPLAYNAME ESP - MM2
+-- Rojo Murderer / Azul Sheriff / Verde Innocent
+-- Tamaño fijo 20 + borde negro
+-- Compatible con HIGHLIGHT_ME
+-- ============================
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
 
 getgenv().DISPLAY_ESP_ENABLED =
     not (getgenv().DISPLAY_ESP_ENABLED or false)
 
 local PREFIX = "DISPLAY_ESP_"
+local ROLE_TEXT_PREFIX = "ROLE_TEXT_"
 
--- ======================
--- ELIMINAR ESP
--- ======================
+-- ============================
+-- ELIMINAR TEXTO
+-- ============================
 
 local function removeESP(plr)
     local gui = CoreGui:FindFirstChild(PREFIX .. plr.Name)
@@ -23,26 +27,46 @@ local function removeESP(plr)
     end
 end
 
--- ======================
+-- ============================
 -- ACTUALIZAR ESP
--- ======================
+-- ============================
 
 local function updateESP(plr)
     if not plr or not plr.Parent then return end
 
-    local char = plr.Character
-    if not char then return end
-
-    local head = char:FindFirstChild("Head")
-    if not head then return end
-
     local guiName = PREFIX .. plr.Name
     local gui = CoreGui:FindFirstChild(guiName)
 
+    -- Respetar HIGHLIGHT_ME
+    if plr == LocalPlayer and getgenv().HIGHLIGHT_ME == false then
+        removeESP(plr)
+        return
+    end
+
+    local roleTable = getgenv().ROLE_TABLE or {}
+    local data = roleTable[plr.Name]
+    local role = data and data.Role
+
+    -- No duplicar el texto Murderer del otro ESP
+    if role == "Murderer" then
+        removeESP(plr)
+        return
+    end
+
+    local char = plr.Character
+    if not char then
+        removeESP(plr)
+        return
+    end
+
+    local head = char:FindFirstChild("Head")
+    if not head then
+        removeESP(plr)
+        return
+    end
+
     if not getgenv().DISPLAY_ESP_ENABLED then
-        if gui then
-            gui:Destroy()
-        end
+        removeESP(plr)
         return
     end
 
@@ -71,30 +95,27 @@ local function updateESP(plr)
         label.Parent = gui
     end
 
-    -- Actualizar cabeza
     gui.Adornee = head
 
     local label = gui:FindFirstChild("Label")
     if not label then return end
 
-    -- DisplayName
     label.Text = plr.DisplayName
 
-    -- Obtener tabla actualizada
-    local roleTable = getgenv().ROLE_TABLE or {}
-    local data = roleTable[plr.Name]
-
-    -- Color desde ROLE_TABLE
-    if data and typeof(data.Color) == "Color3" then
-        label.TextColor3 = data.Color
+    -- Colores MM2
+    if role == "Sheriff" then
+        label.TextColor3 = Color3.fromRGB(0, 120, 255)
+    elseif role == "Innocent" then
+        label.TextColor3 = Color3.fromRGB(0, 255, 0)
     else
+        -- Si el rol todavía no está disponible
         label.TextColor3 = Color3.fromRGB(120, 120, 120)
     end
 end
 
--- ======================
+-- ============================
 -- LOOP PRINCIPAL
--- ======================
+-- ============================
 
 task.spawn(function()
     while true do
@@ -114,5 +135,4 @@ task.spawn(function()
     end
 end)
 
--- Limpiar al salir
 Players.PlayerRemoving:Connect(removeESP)
